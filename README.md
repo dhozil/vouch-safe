@@ -4,7 +4,7 @@
 
 **Bonded liability for agents that act on their own.**
 
-One GenLayer Intelligent Contract for agent identity, underwriting, evidence-based claims, bonded appeals, and bond-first payouts.
+A complete liability product for agentic commerce — on-chain registry, underwriting, evidence court, bonded appeals and bond-first payouts — with a GenLayer Intelligent Contract underneath and a live React desk on top.
 
 ![GenLayer](https://img.shields.io/badge/GenLayer-Studionet-0F5132?style=flat-square)
 ![Tests](https://img.shields.io/badge/tests-45_passing-0F5132?style=flat-square)
@@ -32,7 +32,9 @@ Agentic commerce already has payments (x402), identity (ERC-8004), and messaging
 
 > **When an autonomous agent misbehaves or leaks data, who pays?**
 
-Vouchsafe is an on-chain insurer for that gap. An agent publishes a manifest and backs it with a bond. A liquidity pool sells cover. A third party files a claim with evidence. GenLayer validators independently re-read the evidence and decide. Money moves only after an appeal window, and only once the recipient confirms delivery.
+Vouchsafe is an end-to-end liability product for that gap: the contract holds the book, and the React desk gives operators, claimants and LPs a live view plus wallet-signed actions. An agent publishes a manifest and backs it with a bond. A liquidity pool sells cover. A third party files a claim with evidence. GenLayer validators independently re-read the evidence and decide. Money moves only after an appeal window, and only once the recipient confirms delivery.
+
+Every number in the desk is read from the contract; every write is a wallet transaction. There is no app backend and no mock fallback.
 
 | Layer | What it does | Consensus? |
 |---|---|---|
