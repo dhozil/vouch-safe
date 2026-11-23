@@ -4,7 +4,7 @@
 
 **Bonded liability for agents that act on their own.**
 
-A complete liability product for agentic commerce — on-chain registry, underwriting, evidence court, bonded appeals and bond-first payouts — with a GenLayer Intelligent Contract underneath and a live React desk on top.
+A complete liability product for agentic commerce: on-chain registry, underwriting, evidence court, bonded appeals and bond-first payouts. The protocol is a GenLayer Intelligent Contract; the product is the live React desk, wallet flow and public record around it.
 
 ![GenLayer](https://img.shields.io/badge/GenLayer-Studionet-0F5132?style=flat-square)
 ![Tests](https://img.shields.io/badge/tests-45_passing-0F5132?style=flat-square)
