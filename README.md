@@ -7,7 +7,7 @@
 A complete liability product for agentic commerce: on-chain registry, underwriting, evidence court, bonded appeals and bond-first payouts. The protocol is a GenLayer Intelligent Contract; the product is the live React desk, wallet flow and public record around it.
 
 ![GenLayer](https://img.shields.io/badge/GenLayer-Studionet-0F5132?style=flat-square)
-![Tests](https://img.shields.io/badge/tests-45_passing-0F5132?style=flat-square)
+![Tests](https://img.shields.io/badge/tests-48_passing-0F5132?style=flat-square)
 ![Contract](https://img.shields.io/badge/contract-37_methods-0F5132?style=flat-square)
 ![Frontend](https://img.shields.io/badge/frontend-React_%2B_Vite-1F2937?style=flat-square)
 ![Runner](https://img.shields.io/badge/runner-pinned_py--genlayer-1F2937?style=flat-square)
@@ -194,7 +194,7 @@ genvm-lint check contracts/vouchsafe.py
 
 # 3. Direct-mode tests (mocked web + LLM; no network)
 pytest tests -q
-# 45 passed
+# 48 passed
 
 # 4. Deploy (Studionet is gasless)
 genlayer network set studionet
@@ -278,10 +278,10 @@ After deployment, reads work without a wallet; funding, bonding, premiums, appea
 |---|---|
 | `fund_pool()` / `withdraw_pool(shares)` | LP deposit and withdrawal; withdrawal creates a payout obligation |
 | `register_agent(id, name, wallet, capabilities, manifest_url)` | Register an agent with a bond |
-| `add_bond(id)` / `withdraw_bond(id, amount)` | Adjust the bond; withdrawal is locked while cover is live |
+| `add_bond(id)` / `withdraw_bond(id, amount)` | Adjust the bond; `add_bond` is payable and credits the sent value, withdrawal is locked while cover is live |
 | `set_agent_status(id, status)` | `ACTIVE` or `RETIRED` |
 | `attest_agent(id)` | Verify the manifest and bind the wallet |
-| `request_quote(agent_id, coverage, deductible, term_days, perils, data_scope)` | Underwrite and price cover |
+| `request_quote(agent_id, coverage, deductible, term_days, perils, data_scope)` | Underwrite and price cover; `term_days` is an integer day count (1-365), not atto |
 | `bind_policy(quote_id)` | Pay the premium and reserve coverage |
 | `file_claim(policy_id, ref, type, description, claimed, evidence_urls)` | File a claim with at least `min_evidence_urls` (default 2) |
 | `respond_to_claim(claim_id, statement, evidence_urls)` / `waive_response(claim_id)` | Insured files a defence or waives the 2-day window |
@@ -326,7 +326,7 @@ assets + treasury + pending_payout + confirmed_claim_payouts
 
 ```text
 contracts/vouchsafe.py    Intelligent Contract — 37 methods (15 view / 22 write)
-tests/test_vouchsafe.py   45 direct-mode tests, including validator disagreement
+tests/test_vouchsafe.py   48 direct-mode tests, including validator disagreement
 docs/architecture.md         boundaries, consensus rules, state machine, threat model
 docs/vouchsafe.png         live book screenshot
 frontend/                    React + Vite desk, record drawer, tx monitor

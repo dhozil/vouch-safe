@@ -48,6 +48,27 @@ def as_user(direct_vm, addr, value: int = 0):
     return _Ctx()
 
 
+def public_dispatch(direct_vm, contract, method: str, args, *, sender, value: int = 0):
+    """Call a write through the same ABI the deployed dispatcher enforces.
+
+    Direct-mode method calls skip GenVM's public entrypoint, so a method that
+    is not declared payable still observes ``gl.message.value`` in a unit test
+    even though a real transaction would be rejected. Resolve the method
+    through the generated schema, enforce the dispatcher's payable rule, then
+    invoke it with the sender and value set.
+    """
+    from genlayer.py.get_schema import get_schema
+
+    instance = object.__getattribute__(contract, "_instance")
+    entry = get_schema(type(instance))["methods"][method]
+    if value and not entry["payable"]:
+        raise AssertionError(
+            method + " is not declared payable; the dispatcher would reject the value"
+        )
+    with as_user(direct_vm, sender, value):
+        return getattr(contract, method)(*args)
+
+
 ATTEST_OK = {
     "is_manifest": True,
     "data_policy_present": True,
@@ -330,6 +351,59 @@ def test_quote_prices_the_declared_perils(direct_vm, direct_deploy, direct_alice
     assert quote["premium_atto"] == expected
     assert quote["expires_at"] == int(BASE.timestamp()) + 3 * 86_400
     assert "sanctioned counterparties" in quote["exclusions"]
+
+
+def test_thirty_day_quote_binds_when_term_is_a_day_count(
+    direct_vm, direct_deploy, direct_alice, direct_charlie
+):
+    """The desk sends term_days as an integer; 30 prices and binds as 30 days."""
+    contract = attested_agent(direct_vm, direct_deploy, direct_alice)
+    with as_user(direct_vm, direct_charlie, 50_000 * GEN):
+        contract.fund_pool()
+
+    quote_id = public_dispatch(
+        direct_vm,
+        contract,
+        "request_quote",
+        [
+            "helios",
+            1_000 * GEN,
+            50 * GEN,
+            30,
+            "MISBEHAVIOR,DATA_LEAK",
+            "customer PII: names, emails, orders",
+        ],
+        sender=direct_alice,
+    )
+    quote = contract.get_quote(quote_id)
+    assert quote["decision"] == "ACCEPT"
+    assert quote["term_days"] == 30
+    assert quote["premium_atto"] > 0
+
+    policy_id = public_dispatch(
+        direct_vm,
+        contract,
+        "bind_policy",
+        [quote_id],
+        sender=direct_alice,
+        value=quote["premium_atto"],
+    )
+    policy = contract.get_policy(policy_id)
+    assert policy["status"] == "ACTIVE"
+    assert policy["quote_id"] == quote_id
+    assert policy["end_at"] == int(BASE.timestamp()) + 30 * 86_400
+
+
+def test_atto_scaled_term_is_rejected_as_a_day_count(
+    direct_vm, direct_deploy, direct_alice
+):
+    """parseGen('30') is 30 GEN in atto and is not a valid 30-day term."""
+    contract = attested_agent(direct_vm, direct_deploy, direct_alice)
+    with as_user(direct_vm, direct_alice):
+        with direct_vm.expect_revert("term must be 1-365 days"):
+            contract.request_quote(
+                "helios", 1_000 * GEN, 0, 30 * GEN, "MISBEHAVIOR", ""
+            )
 
 
 def test_declined_quote_cannot_be_bound(direct_vm, direct_deploy, direct_alice):
@@ -1113,6 +1187,29 @@ def test_claim_needs_the_configured_number_of_evidence_urls(
             )
 
 
+def test_add_bond_tops_up_through_payable_public_dispatch(
+    direct_vm, direct_deploy, direct_alice, direct_bob
+):
+    contract = attested_agent(direct_vm, direct_deploy, direct_alice)
+    from genlayer.py.get_schema import get_schema
+
+    instance = object.__getattribute__(contract, "_instance")
+    assert get_schema(type(instance))["methods"]["add_bond"]["payable"] is True
+
+    before = contract.get_agent("helios")["bond_atto"]
+    public_dispatch(
+        direct_vm, contract, "add_bond", ["helios"], sender=direct_alice, value=2 * GEN
+    )
+    assert contract.get_agent("helios")["bond_atto"] == before + 2 * GEN
+
+    with direct_vm.expect_revert("send GEN with add_bond"):
+        public_dispatch(direct_vm, contract, "add_bond", ["helios"], sender=direct_alice)
+    with direct_vm.expect_revert("only the operator can add bond"):
+        public_dispatch(
+            direct_vm, contract, "add_bond", ["helios"], sender=direct_bob, value=GEN
+        )
+
+
 def test_bond_absorbs_the_first_loss_and_suspends_a_thin_agent(
     direct_vm, direct_deploy, direct_alice, direct_bob, direct_charlie
 ):
@@ -1141,8 +1238,9 @@ def test_bond_absorbs_the_first_loss_and_suspends_a_thin_agent(
             contract.withdraw_bond("helios", 1 * GEN)
         with direct_vm.expect_revert("bond below the minimum"):
             contract.set_agent_status("helios", "ACTIVE")
-    with as_user(direct_vm, direct_alice, 5 * GEN):
-        contract.add_bond("helios")
+    public_dispatch(
+        direct_vm, contract, "add_bond", ["helios"], sender=direct_alice, value=5 * GEN
+    )
     with as_user(direct_vm, direct_alice):
         contract.set_agent_status("helios", "ACTIVE")
     assert contract.get_agent("helios")["status"] == "ACTIVE"

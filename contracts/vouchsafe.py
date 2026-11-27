@@ -795,7 +795,9 @@ class Vouchsafe(gl.Contract):
         self.agent_of_owner[owner_key] = agent_key
         self._bump("agents_registered")
 
-    @gl.public.write
+    # The body credits gl.message.value, so the method must be declared
+    # payable or the public dispatcher rejects any transaction that sends GEN.
+    @gl.public.write.payable
     def add_bond(self, agent_id: str) -> None:
         agent_key = agent_id.strip().lower()
         agent = self._require_agent(agent_key)

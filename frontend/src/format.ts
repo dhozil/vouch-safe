@@ -38,6 +38,13 @@ export function parseGen(input: string): bigint {
   return BigInt(whole || '0') * ATTO + BigInt(padded || '0')
 }
 
+export function parseDays(input: string): number {
+  const text = input.trim()
+  if (!/^\d+$/.test(text)) return 0
+  const days = Number(text)
+  return Number.isSafeInteger(days) ? days : 0
+}
+
 export function bps(value: Num | undefined | null): string {
   return (Number(atto(value)) / 100).toFixed(2) + '%'
 }

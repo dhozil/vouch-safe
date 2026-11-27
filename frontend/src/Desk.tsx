@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import type { FormEvent } from 'react'
 import type { Book, Claim, Policy, Quote, RecordRef, TxRun } from './types'
-import { atto, gen, num, parseGen, returnedId, shortAddress } from './format'
+import { atto, gen, num, parseDays, parseGen, returnedId, shortAddress } from './format'
 import { Confidence, Empty, Field, Stamp } from './ui'
 import { TxMonitor } from './TxMonitor'
 import type { WriteResult } from './api'
@@ -133,6 +133,7 @@ function UnderwriteForm({
   const [coverage, setCoverage] = useState('100')
   const [deductible, setDeductible] = useState('5')
   const [term, setTerm] = useState('30')
+  const [termError, setTermError] = useState('')
   const [perils, setPerils] = useState<string[]>(['MISBEHAVIOR', 'DATA_LEAK'])
   const [dataScope, setDataScope] = useState('customer names, emails, order history')
   const quoteCard = useRef<HTMLElement | null>(null)
@@ -153,11 +154,19 @@ function UnderwriteForm({
 
   async function submit(event: FormEvent) {
     event.preventDefault()
+    // term_days is a day count, not an amount: the contract rejects anything
+    // outside 1-365. Parsing it as GEN would send 30 * 10^18 and block the flow.
+    const days = parseDays(term)
+    if (days < 1 || days > 365) {
+      setTermError('Term must be a whole number of days between 1 and 365.')
+      return
+    }
+    setTermError('')
     const result = await run('Quote requested', 'request_quote', [
       agentId,
       parseGen(coverage),
       parseGen(deductible),
-      parseGen(term),
+      days,
       perils.join(','),
       dataScope,
     ])
@@ -210,8 +219,16 @@ function UnderwriteForm({
             </Field>
           </div>
           <Field label="Term" hint="days">
-            <input value={term} onChange={(event) => setTerm(event.target.value)} inputMode="numeric" />
+            <input
+              value={term}
+              onChange={(event) => {
+                setTerm(event.target.value)
+                setTermError('')
+              }}
+              inputMode="numeric"
+            />
           </Field>
+          {termError ? <p className="form-note form-error">{termError}</p> : null}
           <fieldset className="field checks">
             <legend className="field-label">Perils</legend>
             {['MISBEHAVIOR', 'DATA_LEAK'].map((peril) => (

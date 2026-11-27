@@ -1071,6 +1071,10 @@ td strong {
   color: rgba(231, 232, 223, 0.48);
 }
 
+.form-note.form-error {
+  color: #ecb2a6;
+}
+
 .quote-card,
 .filed-card {
   margin-top: 6px;
