@@ -20,7 +20,7 @@ A complete liability product for agentic commerce: on-chain registry, underwriti
 ---
 
 > [!NOTE]
-> **Live on Studionet** — contract `0xB110510d859049064ac2c9073f22E1bB55b55a99` · deploy `0x65f530296fb05e2984527405e7680983a4cd0f24e6633eba0c42787e5c7d9890` · gasless, chain id `61999`.
+> **Live on Studionet** — contract `0xA8cc624497936E1A7845Cf1390b572773193dcCc` · deploy `0x75ab50a6a5f6a6c5762bac736b434729a03e709b8929136fea704f836e7f7fc9` · deployer `0x3958A649b41cd7C8561F4233cC0F5b0469Bc98E0` · chain id `61999`. Studio charges a consensus fee; the frontend estimates it per write.
 
 <p align="center">
   <img src="docs/vouchsafe.png" alt="Vouchsafe live book on Studionet" width="100%" />
@@ -136,7 +136,7 @@ The contract is wired into the frontend through `frontend/.env.local`:
 
 ```bash
 VITE_NETWORK=studionet
-VITE_CONTRACT_ADDRESS=0xB110510d859049064ac2c9073f22E1bB55b55a99
+VITE_CONTRACT_ADDRESS=0xA8cc624497936E1A7845Cf1390b572773193dcCc
 ```
 
 `frontend/src/api.ts` exports `CONTRACT` from `VITE_CONTRACT_ADDRESS` and uses it for every `genlayer-js` read and write. The running Vite dev server is on **http://localhost:5173** and reads the live book from this address.
@@ -150,33 +150,36 @@ Every entity has a **Record** action in the UI. It opens a drawer backed by `get
 
 ## Live on Studionet
 
-| | |
-|---|---|
-| Contract | `0xB110510d859049064ac2c9073f22E1bB55b55a99` |
-| Deploy tx | `0x65f530296fb05e2984527405e7680983a4cd0f24e6633eba0c42787e5c7d9890` |
-| Quote → bind | `0x2364ec0f…` → `0x03778c91…` |
-| Claim → adjudicate | `0xeb742aa9…` → `0x3ad6e884…` — PAY, 10,000 bps, two hosts |
-| Settle → confirm | `0xda6c466b…` → `0x2cc5031f…` — PAY_SENT → DELIVERED |
-| Evidence | `https://paste.rs/lneLn` + `httpbin.org` corroboration |
+Every transaction below was signed by the project wallet `0x3958A649b41cd7C8561F4233cC0F5b0469Bc98E0`. The contract was redeployed after the fixes, so this is a fresh book: one verified agent, one 30-day quote, one bound policy.
+
+| Step | Transaction | Result |
+|---|---|---|
+| Deploy | [`0x75ab50a6…`](https://explorer-studio.genlayer.com/tx/0x75ab50a6a5f6a6c5762bac736b434729a03e709b8929136fea704f836e7f7fc9) | Finalized · Accepted; contract `0xA8cc624497936E1A7845Cf1390b572773193dcCc` |
+| Fund pool | `0x5e4c22f6…` | 100 GEN deposited |
+| Register agent | `0xb5f4d69b…` | `vouchsafe-p1`, bond 0.5 GEN |
+| **Top up bond** | [`0xc9cf6951…`](https://explorer-studio.genlayer.com/tx/0xc9cf695153458bc1d583dbbfb42e81f185fb30d85fbc8088d04068a3165bc7df) | Public `add_bond` with 2 GEN; bond 0.5 → **2.5 GEN** |
+| Attest | `0x6a2cdcf3…` | verified, `AUTONOMOUS`, reputation 580 |
+| **30-day quote** | [`0x1cd814e2…`](https://explorer-studio.genlayer.com/tx/0x1cd814e2184f39f432a56f7fa7cf6a319af33c67c0ee80842386278735dc9f27) | `Q1` ACCEPT, `term_days: 30`, premium `60410958904109589` atto |
+| **Bind policy** | [`0x1076510b…`](https://explorer-studio.genlayer.com/tx/0x1076510b8a4b28c5280c5cf811ae100bf769874bfe5c3ffaca82b38e6e9d06cc) | `P1` ACTIVE, exact premium paid |
 
 Current book:
 
 ```text
-capital        9,556.73 GEN
-reserved         550.00 GEN
-in flight          0.00 GEN
-premium earned     6.04 GEN
-claims paid        1 × 450 GEN
-bond slashed       1.00 GEN
-agent status       SUSPENDED (bond below minimum)
+capital        100.057390410958904110 GEN
+reserved        10.000000000000000000 GEN
+premium earned   0.060410958904109589 GEN
+policies         1 ACTIVE (P1)
+claims           0
+agent            vouchsafe-p1 · verified · bond 2.500000000000000000 GEN
 ```
 
 Read it yourself:
 
 ```bash
-genlayer call 0xB110510d859049064ac2c9073f22E1bB55b55a99 get_pool
-genlayer call 0xB110510d859049064ac2c9073f22E1bB55b55a99 get_agent --args helios-p1
-genlayer call 0xB110510d859049064ac2c9073f22E1bB55b55a99 get_claim --args C1
+genlayer call 0xA8cc624497936E1A7845Cf1390b572773193dcCc get_pool
+genlayer call 0xA8cc624497936E1A7845Cf1390b572773193dcCc get_agent --args vouchsafe-p1
+genlayer call 0xA8cc624497936E1A7845Cf1390b572773193dcCc get_quote --args Q1
+genlayer call 0xA8cc624497936E1A7845Cf1390b572773193dcCc get_policy --args P1
 ```
 
 ## Quick start
@@ -196,9 +199,10 @@ genvm-lint check contracts/vouchsafe.py
 pytest tests -q
 # 48 passed
 
-# 4. Deploy (Studionet is gasless)
+# 4. Deploy (Studio charges a consensus fee)
 genlayer network set studionet
-genlayer deploy --contract contracts/vouchsafe.py --args 500 500000000000000000
+genlayer deploy --contract contracts/vouchsafe.py --args 500 500000000000000000 \
+  --fee-profile /path/to/fee-profile.json
 
 # 5. Frontend
 cd frontend
@@ -207,7 +211,7 @@ npm install
 npm run dev                  # http://localhost:5173
 ```
 
-Constructor args are `fee_bps` and `min_bond_atto` in atto (`10^-18 GEN`); the example is a 0.5 GEN minimum bond.
+Constructor args are `fee_bps` and `min_bond_atto` in atto (`10^-18 GEN`); the example is a 0.5 GEN minimum bond. Studio rejects zero-fee transactions: generate a fee profile with `gltest --fee-profile ./fee-profile.json` (or pass a `--fees` JSON distribution) before deploying, and let `genlayer-js` estimate the full envelope before each write.
 
 > [!IMPORTANT]
 > The `genlayer` CLI always sends `value: 0`. It can drive non-payable writes, but **funding the pool, posting a bond, paying a premium, and posting an appeal bond require a value-capable client** — the frontend wallet or a small `genlayer-js` script.
@@ -223,16 +227,20 @@ import { privateKeyToAccount } from 'viem/accounts'
 
 const account = privateKeyToAccount(process.env.PRIVATE_KEY)
 const client = createClient({ chain: studionet, account })
-const address = '0xB110510d859049064ac2c9073f22E1bB55b55a99'
+const address = '0xA8cc624497936E1A7845Cf1390b572773193dcCc'
 const GEN = 10n ** 18n
 
-await client.writeContract({ address, functionName: 'fund_pool', args: [], value: 100n * GEN })
-await client.writeContract({
-  address,
-  functionName: 'register_agent',
-  args: ['helios', 'Helios Trader', '0xYourAgentWallet', 'quote,swap', 'https://your.agent/manifest.json'],
-  value: GEN / 2n,
-})
+async function send(functionName, args, value) {
+  const fees = await client.estimateTransactionFeesForWrite({ address, functionName, args, value })
+  return client.writeContract({ address, functionName, args, value, fees })
+}
+
+await send('fund_pool', [], 100n * GEN)
+await send(
+  'register_agent',
+  ['vouchsafe-seed', 'Vouchsafe Seed Agent', '0xYourAgentWallet', 'quote,bind', 'https://your.agent/manifest.json'],
+  GEN / 2n,
+)
 ```
 
 </details>
@@ -262,7 +270,7 @@ This repository is Vercel-ready as a **static Vite frontend**. There are no serv
 
 ```bash
 VITE_NETWORK=studionet
-VITE_CONTRACT_ADDRESS=0xB110510d859049064ac2c9073f22E1bB55b55a99
+VITE_CONTRACT_ADDRESS=0xA8cc624497936E1A7845Cf1390b572773193dcCc
 ```
 
 If you add the same keys in **Vercel → Settings → Environment Variables**, they override the file. Vite inlines these values at build time, so redeploy after changing them.

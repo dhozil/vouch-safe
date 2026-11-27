@@ -193,11 +193,25 @@ export async function write(
 ): Promise<WriteResult> {
   onStage?.({ stage: 'SIGNING' })
 
+  // Studio charges a consensus fee on every write. Estimate it from a public
+  // client first, then hand the exact fee envelope to the connected wallet.
+  const sender =
+    typeof client.account === 'string' ? client.account : client.account?.address
+  if (!sender) throw new Error('Connect a wallet before sending a transaction.')
+  const feeClient = createClient({ chain: CHAIN, account: sender as Address })
+  const fees = await feeClient.estimateTransactionFeesForWrite({
+    address: CONTRACT as Address,
+    functionName,
+    args: args as never[],
+    value,
+  })
+
   const hash = (await client.writeContract({
     address: CONTRACT as Address,
     functionName,
     args: args as never[],
     value,
+    fees,
   })) as string
 
   onStage?.({ stage: 'SUBMITTED', hash })
